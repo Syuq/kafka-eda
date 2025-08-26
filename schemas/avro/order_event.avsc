@@ -1,0 +1,101 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "com.example.kafka.eda.events",
+  "doc": "Order event schema for Kafka EDA demo",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "doc": "Unique identifier for the event"
+    },
+    {
+      "name": "correlation_id",
+      "type": "string",
+      "doc": "Correlation ID for tracing"
+    },
+    {
+      "name": "event_type",
+      "type": {
+        "type": "enum",
+        "name": "EventType",
+        "symbols": ["ORDER_CREATED", "ORDER_UPDATED", "ORDER_CANCELLED", "ORDER_COMPLETED"]
+      },
+      "doc": "Type of the event"
+    },
+    {
+      "name": "aggregate_id",
+      "type": "string",
+      "doc": "ID of the aggregate (order ID)"
+    },
+    {
+      "name": "aggregate_type",
+      "type": "string",
+      "default": "order",
+      "doc": "Type of the aggregate"
+    },
+    {
+      "name": "version",
+      "type": "int",
+      "default": 1,
+      "doc": "Version of the event schema"
+    },
+    {
+      "name": "timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Timestamp when the event occurred"
+    },
+    {
+      "name": "data",
+      "type": {
+        "type": "record",
+        "name": "OrderData",
+        "fields": [
+          {
+            "name": "order",
+            "type": {
+              "type": "record",
+              "name": "Order",
+              "fields": [
+                {"name": "id", "type": "string"},
+                {"name": "customer_id", "type": "string"},
+                {"name": "product_id", "type": "string"},
+                {"name": "quantity", "type": "int"},
+                {"name": "price", "type": "double"},
+                {"name": "status", "type": "string"},
+                {
+                  "name": "created_at",
+                  "type": {
+                    "type": "long",
+                    "logicalType": "timestamp-millis"
+                  }
+                },
+                {
+                  "name": "updated_at",
+                  "type": {
+                    "type": "long",
+                    "logicalType": "timestamp-millis"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "doc": "Event data payload"
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "map",
+        "values": "string"
+      },
+      "default": {},
+      "doc": "Additional metadata"
+    }
+  ]
+}
+

@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package com.example.kafka.eda.events;
+
+option go_package = "go-kafka-eda-demo/schemas/protobuf";
+
+import "google/protobuf/timestamp.proto";
+
+// Order event message
+message OrderEvent {
+  string event_id = 1;
+  string correlation_id = 2;
+  EventType event_type = 3;
+  string aggregate_id = 4;
+  string aggregate_type = 5;
+  int32 version = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  OrderData data = 8;
+  map<string, string> metadata = 9;
+}
+
+// Event types
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  ORDER_CREATED = 1;
+  ORDER_UPDATED = 2;
+  ORDER_CANCELLED = 3;
+  ORDER_COMPLETED = 4;
+}
+
+// Order data payload
+message OrderData {
+  Order order = 1;
+}
+
+// Order entity
+message Order {
+  string id = 1;
+  string customer_id = 2;
+  string product_id = 3;
+  int32 quantity = 4;
+  double price = 5;
+  string status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// Retry event for DLQ handling
+message RetryEvent {
+  OrderEvent original_event = 1;
+  int32 retry_count = 2;
+  string last_error = 3;
+  google.protobuf.Timestamp next_retry_at = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// DLQ event
+message DLQEvent {
+  OrderEvent original_event = 1;
+  repeated RetryAttempt retry_history = 2;
+  string final_error = 3;
+  google.protobuf.Timestamp created_at = 4;
+  string reason = 5;
+}
+
+// Retry attempt record
+message RetryAttempt {
+  int32 attempt_number = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string error = 3;
+  string duration = 4;
+}
+
+// Idempotency record
+message IdempotencyRecord {
+  string event_id = 1;
+  string correlation_id = 2;
+  google.protobuf.Timestamp processed_at = 3;
+  string status = 4;
+  string result = 5;
+}
+

@@ -1,0 +1,200 @@
+{
+  "single_orders": [
+    {
+      "customer_id": "customer-001",
+      "product_id": "laptop-macbook-pro",
+      "quantity": 1,
+      "price": 2499.99
+    },
+    {
+      "customer_id": "customer-002",
+      "product_id": "phone-iphone-15",
+      "quantity": 2,
+      "price": 999.99
+    },
+    {
+      "customer_id": "customer-003",
+      "product_id": "tablet-ipad-air",
+      "quantity": 1,
+      "price": 599.99
+    },
+    {
+      "customer_id": "customer-004",
+      "product_id": "watch-apple-watch",
+      "quantity": 3,
+      "price": 399.99
+    },
+    {
+      "customer_id": "customer-005",
+      "product_id": "headphones-airpods-pro",
+      "quantity": 1,
+      "price": 249.99
+    }
+  ],
+  "batch_orders": [
+    [
+      {
+        "customer_id": "batch-customer-001",
+        "product_id": "monitor-4k-dell",
+        "quantity": 2,
+        "price": 449.99
+      },
+      {
+        "customer_id": "batch-customer-002",
+        "product_id": "keyboard-mechanical",
+        "quantity": 1,
+        "price": 129.99
+      },
+      {
+        "customer_id": "batch-customer-003",
+        "product_id": "mouse-wireless",
+        "quantity": 1,
+        "price": 79.99
+      }
+    ],
+    [
+      {
+        "customer_id": "enterprise-customer-001",
+        "product_id": "server-rack-dell",
+        "quantity": 5,
+        "price": 4999.99
+      },
+      {
+        "customer_id": "enterprise-customer-002",
+        "product_id": "switch-cisco-48port",
+        "quantity": 2,
+        "price": 1299.99
+      },
+      {
+        "customer_id": "enterprise-customer-003",
+        "product_id": "firewall-fortinet",
+        "quantity": 1,
+        "price": 2499.99
+      }
+    ]
+  ],
+  "load_test_orders": {
+    "customers": [
+      "load-customer-001",
+      "load-customer-002", 
+      "load-customer-003",
+      "load-customer-004",
+      "load-customer-005"
+    ],
+    "products": [
+      {
+        "id": "load-product-001",
+        "name": "Test Product 1",
+        "price": 19.99
+      },
+      {
+        "id": "load-product-002", 
+        "name": "Test Product 2",
+        "price": 29.99
+      },
+      {
+        "id": "load-product-003",
+        "name": "Test Product 3", 
+        "price": 39.99
+      },
+      {
+        "id": "load-product-004",
+        "name": "Test Product 4",
+        "price": 49.99
+      },
+      {
+        "id": "load-product-005",
+        "name": "Test Product 5",
+        "price": 59.99
+      }
+    ]
+  },
+  "error_test_cases": [
+    {
+      "description": "Missing customer ID",
+      "data": {
+        "customer_id": "",
+        "product_id": "product-test",
+        "quantity": 1,
+        "price": 10.00
+      }
+    },
+    {
+      "description": "Missing product ID", 
+      "data": {
+        "customer_id": "customer-test",
+        "product_id": "",
+        "quantity": 1,
+        "price": 10.00
+      }
+    },
+    {
+      "description": "Negative quantity",
+      "data": {
+        "customer_id": "customer-test",
+        "product_id": "product-test", 
+        "quantity": -1,
+        "price": 10.00
+      }
+    },
+    {
+      "description": "Negative price",
+      "data": {
+        "customer_id": "customer-test",
+        "product_id": "product-test",
+        "quantity": 1,
+        "price": -10.00
+      }
+    },
+    {
+      "description": "Zero quantity",
+      "data": {
+        "customer_id": "customer-test",
+        "product_id": "product-test",
+        "quantity": 0,
+        "price": 10.00
+      }
+    }
+  ],
+  "idempotency_test": {
+    "correlation_id": "idempotency-test-12345",
+    "order": {
+      "customer_id": "idempotency-customer",
+      "product_id": "idempotency-product",
+      "quantity": 1,
+      "price": 99.99
+    }
+  },
+  "schema_evolution_examples": {
+    "v1_order": {
+      "id": "order-v1-001",
+      "customer_id": "customer-schema-test",
+      "product_id": "product-schema-test",
+      "quantity": 1,
+      "price": 100.00,
+      "status": "pending",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    "v2_order": {
+      "id": "order-v2-001",
+      "customer_id": "customer-schema-test",
+      "product_id": "product-schema-test", 
+      "quantity": 1,
+      "price": 100.00,
+      "currency": "USD",
+      "discount": 10.00,
+      "shipping_address": {
+        "street": "123 Main St",
+        "city": "Anytown",
+        "state": "CA",
+        "zip_code": "12345",
+        "country": "USA"
+      },
+      "status": "pending",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  }
+}
+

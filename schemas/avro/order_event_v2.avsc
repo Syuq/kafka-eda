@@ -1,0 +1,144 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "com.example.kafka.eda.events",
+  "doc": "Order event schema v2 for Kafka EDA demo - with schema evolution",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "doc": "Unique identifier for the event"
+    },
+    {
+      "name": "correlation_id",
+      "type": "string",
+      "doc": "Correlation ID for tracing"
+    },
+    {
+      "name": "event_type",
+      "type": {
+        "type": "enum",
+        "name": "EventType",
+        "symbols": ["ORDER_CREATED", "ORDER_UPDATED", "ORDER_CANCELLED", "ORDER_COMPLETED", "ORDER_SHIPPED", "ORDER_DELIVERED"]
+      },
+      "doc": "Type of the event - added new event types"
+    },
+    {
+      "name": "aggregate_id",
+      "type": "string",
+      "doc": "ID of the aggregate (order ID)"
+    },
+    {
+      "name": "aggregate_type",
+      "type": "string",
+      "default": "order",
+      "doc": "Type of the aggregate"
+    },
+    {
+      "name": "version",
+      "type": "int",
+      "default": 2,
+      "doc": "Version of the event schema - updated to v2"
+    },
+    {
+      "name": "timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Timestamp when the event occurred"
+    },
+    {
+      "name": "source_service",
+      "type": "string",
+      "default": "unknown",
+      "doc": "Service that generated the event - new field with default"
+    },
+    {
+      "name": "data",
+      "type": {
+        "type": "record",
+        "name": "OrderData",
+        "fields": [
+          {
+            "name": "order",
+            "type": {
+              "type": "record",
+              "name": "Order",
+              "fields": [
+                {"name": "id", "type": "string"},
+                {"name": "customer_id", "type": "string"},
+                {"name": "product_id", "type": "string"},
+                {"name": "quantity", "type": "int"},
+                {"name": "price", "type": "double"},
+                {"name": "status", "type": "string"},
+                {
+                  "name": "currency",
+                  "type": "string",
+                  "default": "USD",
+                  "doc": "Currency code - new field with default"
+                },
+                {
+                  "name": "discount",
+                  "type": ["null", "double"],
+                  "default": null,
+                  "doc": "Discount amount - new optional field"
+                },
+                {
+                  "name": "shipping_address",
+                  "type": [
+                    "null",
+                    {
+                      "type": "record",
+                      "name": "Address",
+                      "fields": [
+                        {"name": "street", "type": "string"},
+                        {"name": "city", "type": "string"},
+                        {"name": "state", "type": "string"},
+                        {"name": "zip_code", "type": "string"},
+                        {"name": "country", "type": "string"}
+                      ]
+                    }
+                  ],
+                  "default": null,
+                  "doc": "Shipping address - new optional complex field"
+                },
+                {
+                  "name": "created_at",
+                  "type": {
+                    "type": "long",
+                    "logicalType": "timestamp-millis"
+                  }
+                },
+                {
+                  "name": "updated_at",
+                  "type": {
+                    "type": "long",
+                    "logicalType": "timestamp-millis"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "doc": "Event data payload"
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "map",
+        "values": "string"
+      },
+      "default": {},
+      "doc": "Additional metadata"
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "2.0",
+      "doc": "Schema version for compatibility tracking - new field"
+    }
+  ]
+}
+
