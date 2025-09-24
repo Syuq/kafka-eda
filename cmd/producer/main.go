@@ -7,15 +7,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
-	"github.com/gorilla/mux"
 	"go-kafka-eda-demo/internal/kafka"
 	"go-kafka-eda-demo/internal/models"
 	"go-kafka-eda-demo/pkg/config"
 	"go-kafka-eda-demo/pkg/logger"
+
+	"github.com/gorilla/mux"
 )
 
 type ProducerService struct {
@@ -129,11 +129,11 @@ func (s *ProducerService) correlationIDMiddleware(next http.Handler) http.Handle
 func (s *ProducerService) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		logger.Infof(r.Context(), "Request started: %s %s", r.Method, r.URL.Path)
-		
+
 		next.ServeHTTP(w, r)
-		
+
 		duration := time.Since(start)
 		logger.Infof(r.Context(), "Request completed: %s %s in %v", r.Method, r.URL.Path, duration)
 	})
@@ -141,7 +141,7 @@ func (s *ProducerService) loggingMiddleware(next http.Handler) http.Handler {
 
 func (s *ProducerService) createOrder(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	var orderReq OrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&orderReq); err != nil {
 		s.sendErrorResponse(w, ctx, http.StatusBadRequest, "Invalid request body", err)
@@ -171,7 +171,7 @@ func (s *ProducerService) createOrder(w http.ResponseWriter, r *http.Request) {
 	eventData := map[string]interface{}{
 		"order": order,
 	}
-	
+
 	event := models.NewOrderEvent(
 		models.EventTypeOrderCreated,
 		order.ID,
@@ -193,7 +193,7 @@ func (s *ProducerService) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Infof(ctx, "Order created successfully: %s", order.ID)
-	
+
 	s.sendSuccessResponse(w, ctx, "Order created successfully", map[string]interface{}{
 		"order_id": order.ID,
 		"event_id": event.EventID,
@@ -202,7 +202,7 @@ func (s *ProducerService) createOrder(w http.ResponseWriter, r *http.Request) {
 
 func (s *ProducerService) createOrdersBatch(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	var orderReqs []OrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&orderReqs); err != nil {
 		s.sendErrorResponse(w, ctx, http.StatusBadRequest, "Invalid request body", err)
@@ -246,7 +246,7 @@ func (s *ProducerService) createOrdersBatch(w http.ResponseWriter, r *http.Reque
 		eventData := map[string]interface{}{
 			"order": order,
 		}
-		
+
 		event := models.NewOrderEvent(
 			models.EventTypeOrderCreated,
 			order.ID,
@@ -284,7 +284,7 @@ func (s *ProducerService) createOrdersBatch(w http.ResponseWriter, r *http.Reque
 	}
 
 	logger.Infof(ctx, "Batch processed: %d successful, %d failed", len(results), len(errors))
-	
+
 	s.sendSuccessResponse(w, ctx, "Batch processed", response)
 }
 
@@ -330,7 +330,7 @@ func (s *ProducerService) sendSuccessResponse(w http.ResponseWriter, ctx context
 		Data:          data,
 		CorrelationID: logger.GetCorrelationID(ctx),
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -338,13 +338,13 @@ func (s *ProducerService) sendSuccessResponse(w http.ResponseWriter, ctx context
 
 func (s *ProducerService) sendErrorResponse(w http.ResponseWriter, ctx context.Context, statusCode int, message string, err error) {
 	logger.Errorf(ctx, "%s: %v", message, err)
-	
+
 	response := Response{
 		Success:       false,
 		Message:       message,
 		CorrelationID: logger.GetCorrelationID(ctx),
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(response)
@@ -353,4 +353,3 @@ func (s *ProducerService) sendErrorResponse(w http.ResponseWriter, ctx context.C
 func generateOrderID() string {
 	return fmt.Sprintf("order_%d_%d", time.Now().Unix(), time.Now().Nanosecond())
 }
-

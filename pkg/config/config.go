@@ -8,20 +8,20 @@ import (
 )
 
 type Config struct {
-	Kafka         KafkaConfig
-	Redis         RedisConfig
+	Kafka          KafkaConfig
+	Redis          RedisConfig
 	SchemaRegistry SchemaRegistryConfig
-	Telemetry     TelemetryConfig
-	App           AppConfig
+	Telemetry      TelemetryConfig
+	App            AppConfig
 }
 
 type KafkaConfig struct {
-	Brokers           []string
-	TopicOrders       string
-	TopicOrdersRetry  string
-	TopicOrdersDLQ    string
-	TopicIdempotency  string
-	ConsumerGroup     string
+	Brokers          []string
+	TopicOrders      string
+	TopicOrdersRetry string
+	TopicOrdersDLQ   string
+	TopicIdempotency string
+	ConsumerGroup    string
 }
 
 type RedisConfig struct {
@@ -53,12 +53,12 @@ type AppConfig struct {
 func Load() *Config {
 	return &Config{
 		Kafka: KafkaConfig{
-			Brokers:           strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
-			TopicOrders:       getEnv("KAFKA_TOPIC_ORDERS", "orders"),
-			TopicOrdersRetry:  getEnv("KAFKA_TOPIC_ORDERS_RETRY", "orders_retry"),
-			TopicOrdersDLQ:    getEnv("KAFKA_TOPIC_ORDERS_DLQ", "orders_dlq"),
-			TopicIdempotency:  getEnv("KAFKA_TOPIC_IDEMPOTENCY", "orders_idempotency"),
-			ConsumerGroup:     getEnv("KAFKA_CONSUMER_GROUP", "orders-consumer-group"),
+			Brokers:          strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
+			TopicOrders:      getEnv("KAFKA_TOPIC_ORDERS", "orders"),
+			TopicOrdersRetry: getEnv("KAFKA_TOPIC_ORDERS_RETRY", "orders_retry"),
+			TopicOrdersDLQ:   getEnv("KAFKA_TOPIC_ORDERS_DLQ", "orders_dlq"),
+			TopicIdempotency: getEnv("KAFKA_TOPIC_IDEMPOTENCY", "orders_idempotency"),
+			ConsumerGroup:    getEnv("KAFKA_CONSUMER_GROUP", "orders-consumer-group"),
 		},
 		Redis: RedisConfig{
 			Addr:     getEnv("REDIS_ADDR", "localhost:6379"),
@@ -110,3 +110,11 @@ func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
 	return defaultValue
 }
 
+func (a *AppConfig) IncrementedHTTPPort() string {
+	port, err := strconv.Atoi(a.HTTPPort)
+	if err != nil {
+		// fallback, return original port if parse fail
+		return a.HTTPPort
+	}
+	return strconv.Itoa(port + 1)
+}

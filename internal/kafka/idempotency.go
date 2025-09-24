@@ -7,21 +7,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/IBM/sarama"
 	"go-kafka-eda-demo/internal/models"
 	"go-kafka-eda-demo/internal/telemetry"
 	"go-kafka-eda-demo/pkg/config"
 	"go-kafka-eda-demo/pkg/logger"
+
+	"github.com/IBM/sarama"
 )
 
 // CompactTopicIdempotencyChecker implements idempotency using Kafka compact topics
 type CompactTopicIdempotencyChecker struct {
-	kafkaClient    *Client
-	config         *config.KafkaConfig
-	cache          map[string]*models.IdempotencyRecord
-	cacheMutex     sync.RWMutex
-	lastOffset     int64
-	consumer       sarama.Consumer
+	kafkaClient       *Client
+	config            *config.KafkaConfig
+	cache             map[string]*models.IdempotencyRecord
+	cacheMutex        sync.RWMutex
+	lastOffset        int64
+	consumer          sarama.Consumer
 	partitionConsumer sarama.PartitionConsumer
 }
 
@@ -74,7 +75,7 @@ func (c *CompactTopicIdempotencyChecker) initializeCache(ctx context.Context) er
 			if message == nil {
 				continue
 			}
-			
+
 			if err := c.processIdempotencyMessage(ctx, message); err != nil {
 				logger.Errorf(ctx, "Failed to process idempotency message: %v", err)
 			}
@@ -100,7 +101,7 @@ func (c *CompactTopicIdempotencyChecker) maintainCache(ctx context.Context) {
 			if message == nil {
 				continue
 			}
-			
+
 			if err := c.processIdempotencyMessage(ctx, message); err != nil {
 				logger.Errorf(ctx, "Failed to process idempotency message: %v", err)
 			}
@@ -206,9 +207,9 @@ func (c *CompactTopicIdempotencyChecker) GetCacheStats() map[string]interface{} 
 	defer c.cacheMutex.RUnlock()
 
 	stats := map[string]interface{}{
-		"cache_size":   len(c.cache),
-		"last_offset":  c.lastOffset,
-		"timestamp":    time.Now().UTC(),
+		"cache_size":  len(c.cache),
+		"last_offset": c.lastOffset,
+		"timestamp":   time.Now().UTC(),
 	}
 
 	// Count by status
@@ -243,17 +244,18 @@ func (c *CompactTopicIdempotencyChecker) Close() error {
 	return nil
 }
 
-// HybridIdempotencyChecker combines Redis and compact topic for better performance
-type HybridIdempotencyChecker struct {
-	redisChecker      *RedisIdempotencyChecker
-	compactTopicChecker *CompactTopicIdempotencyChecker
-	useRedisFirst     bool
-}
-
+// RedisIdempotencyChecker defines the interface for Redis-based idempotency checking
 type RedisIdempotencyChecker interface {
 	CheckIdempotency(ctx context.Context, eventID string) (*models.IdempotencyRecord, error)
 	SetIdempotency(ctx context.Context, record *models.IdempotencyRecord, ttl time.Duration) error
 	DeleteIdempotency(ctx context.Context, eventID string) error
+}
+
+// HybridIdempotencyChecker combines Redis and compact topic for better performance
+type HybridIdempotencyChecker struct {
+	redisChecker        RedisIdempotencyChecker // Changed from *RedisIdempotencyChecker to RedisIdempotencyChecker
+	compactTopicChecker *CompactTopicIdempotencyChecker
+	useRedisFirst       bool
 }
 
 func NewHybridIdempotencyChecker(redisChecker RedisIdempotencyChecker, compactTopicChecker *CompactTopicIdempotencyChecker) *HybridIdempotencyChecker {
@@ -274,7 +276,7 @@ func (h *HybridIdempotencyChecker) CheckIdempotency(ctx context.Context, eventID
 		if err == nil && record != nil {
 			return record, nil
 		}
-		
+
 		// Fallback to compact topic
 		return h.compactTopicChecker.CheckIdempotency(ctx, eventID)
 	}
@@ -332,4 +334,3 @@ func (h *HybridIdempotencyChecker) DeleteIdempotency(ctx context.Context, eventI
 
 	return nil
 }
-

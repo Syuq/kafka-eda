@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"go-kafka-eda-demo/pkg/config"
+	"go-kafka-eda-demo/pkg/logger"
+
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
-	"go-kafka-eda-demo/pkg/config"
-	"go-kafka-eda-demo/pkg/logger"
 )
 
 var tracer oteltrace.Tracer
@@ -80,12 +82,12 @@ func StartSpanFromContext(ctx context.Context, name string) (context.Context, ot
 func SetSpanError(span oteltrace.Span, err error) {
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(oteltrace.StatusCodeError, err.Error())
+		span.SetStatus(codes.Error, err.Error())
 	}
 }
 
 func SetSpanSuccess(span oteltrace.Span) {
-	span.SetStatus(oteltrace.StatusCodeOk, "")
+	span.SetStatus(codes.Ok, "")
 }
 
 func AddSpanEvent(span oteltrace.Span, name string, attributes ...oteltrace.EventOption) {
@@ -136,4 +138,3 @@ func StartRedisSpan(ctx context.Context, operation string) (context.Context, ote
 		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
 	)
 }
-

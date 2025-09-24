@@ -9,13 +9,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gorilla/mux"
 	"go-kafka-eda-demo/internal/handler"
 	"go-kafka-eda-demo/internal/kafka"
 	"go-kafka-eda-demo/internal/redis"
 	"go-kafka-eda-demo/internal/telemetry"
 	"go-kafka-eda-demo/pkg/config"
 	"go-kafka-eda-demo/pkg/logger"
+
+	"github.com/gorilla/mux"
 )
 
 type ConsumerService struct {
@@ -79,7 +80,7 @@ func main() {
 	service.setupRoutes(router)
 
 	server := &http.Server{
-		Addr:         ":" + cfg.App.HTTPPort,
+		Addr:         ":" + cfg.App.IncrementedHTTPPort(),
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -88,7 +89,7 @@ func main() {
 
 	// Start HTTP server in a goroutine
 	go func() {
-		logger.Infof(ctx, "Consumer HTTP server listening on port %s", cfg.App.HTTPPort)
+		logger.Infof(ctx, "Consumer HTTP server listening on port %s", cfg.App.IncrementedHTTPPort())
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Errorf(ctx, "HTTP server error: %v", err)
 		}
@@ -101,7 +102,7 @@ func main() {
 	go func() {
 		topics := []string{cfg.Kafka.TopicOrders}
 		logger.Infof(ctx, "Starting to consume from topics: %v", topics)
-		
+
 		if err := kafkaClient.Subscribe(consumerCtx, topics, orderHandler); err != nil {
 			logger.Errorf(ctx, "Consumer error: %v", err)
 		}
@@ -162,11 +163,11 @@ func (s *ConsumerService) correlationIDMiddleware(next http.Handler) http.Handle
 func (s *ConsumerService) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		logger.Infof(r.Context(), "Request started: %s %s", r.Method, r.URL.Path)
-		
+
 		next.ServeHTTP(w, r)
-		
+
 		duration := time.Since(start)
 		logger.Infof(r.Context(), "Request completed: %s %s in %v", r.Method, r.URL.Path, duration)
 	})
@@ -174,7 +175,7 @@ func (s *ConsumerService) loggingMiddleware(next http.Handler) http.Handler {
 
 func (s *ConsumerService) getMetrics(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	// Get circuit breaker metrics
 	cbCounts := s.orderHandler.GetCircuitBreakerCounts()
 	cbState := s.orderHandler.GetCircuitBreakerState()
@@ -196,14 +197,14 @@ func (s *ConsumerService) getMetrics(w http.ResponseWriter, r *http.Request) {
 
 func (s *ConsumerService) getCircuitBreakerStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	state := s.orderHandler.GetCircuitBreakerState()
 	counts := s.orderHandler.GetCircuitBreakerCounts()
 
 	status := map[string]interface{}{
-		"state":                 state.String(),
-		"counts":                counts,
-		"timestamp":             time.Now().UTC(),
+		"state":     state.String(),
+		"counts":    counts,
+		"timestamp": time.Now().UTC(),
 	}
 
 	s.sendSuccessResponse(w, ctx, "Circuit breaker status", status)
@@ -211,11 +212,11 @@ func (s *ConsumerService) getCircuitBreakerStatus(w http.ResponseWriter, r *http
 
 func (s *ConsumerService) resetCircuitBreaker(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	// Note: This would require adding a reset method to the circuit breaker
 	// For now, we'll just return a success response
 	logger.Infof(ctx, "Circuit breaker reset requested")
-	
+
 	s.sendSuccessResponse(w, ctx, "Circuit breaker reset requested", map[string]interface{}{
 		"timestamp": time.Now().UTC(),
 	})
@@ -232,7 +233,7 @@ func (s *ConsumerService) healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (s *ConsumerService) readinessCheck(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	// Check Redis connectivity
 	_, err := s.redisClient.Get(ctx, "health_check")
 	if err != nil && err.Error() != "redis: nil" {
@@ -254,7 +255,7 @@ func (s *ConsumerService) sendSuccessResponse(w http.ResponseWriter, ctx context
 		Data:          data,
 		CorrelationID: logger.GetCorrelationID(ctx),
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -262,15 +263,14 @@ func (s *ConsumerService) sendSuccessResponse(w http.ResponseWriter, ctx context
 
 func (s *ConsumerService) sendErrorResponse(w http.ResponseWriter, ctx context.Context, statusCode int, message string, err error) {
 	logger.Errorf(ctx, "%s: %v", message, err)
-	
+
 	response := Response{
 		Success:       false,
 		Message:       message,
 		CorrelationID: logger.GetCorrelationID(ctx),
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(response)
 }
-

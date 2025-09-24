@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/IBM/sarama"
 	"go-kafka-eda-demo/internal/circuit"
 	"go-kafka-eda-demo/internal/kafka"
 	"go-kafka-eda-demo/internal/models"
@@ -14,13 +13,15 @@ import (
 	"go-kafka-eda-demo/internal/telemetry"
 	"go-kafka-eda-demo/pkg/config"
 	"go-kafka-eda-demo/pkg/logger"
+
+	"github.com/IBM/sarama"
 )
 
 type OrderHandler struct {
-	kafkaClient       *kafka.Client
-	redisClient       *redis.Client
-	config            *config.Config
-	circuitBreaker    *circuit.CircuitBreaker
+	kafkaClient        *kafka.Client
+	redisClient        *redis.Client
+	config             *config.Config
+	circuitBreaker     *circuit.CircuitBreaker
 	exponentialBackoff *circuit.ExponentialBackoff
 }
 
@@ -275,7 +276,7 @@ func (h *OrderHandler) handleProcessingError(ctx context.Context, event *models.
 
 	currentRetryCount := 0
 	if retryCount != "" {
-		if count, parseErr := json.Unmarshal([]byte(retryCount), &currentRetryCount); parseErr != nil {
+		if parseErr := json.Unmarshal([]byte(retryCount), &currentRetryCount); parseErr != nil {
 			logger.Errorf(ctx, "Failed to parse retry count: %v", parseErr)
 		}
 	}
@@ -376,4 +377,3 @@ func (h *OrderHandler) GetCircuitBreakerState() circuit.State {
 func (h *OrderHandler) GetCircuitBreakerCounts() circuit.Counts {
 	return h.circuitBreaker.Counts()
 }
-

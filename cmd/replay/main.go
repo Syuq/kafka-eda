@@ -11,14 +11,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/IBM/sarama"
-	"github.com/gorilla/mux"
 	"go-kafka-eda-demo/internal/kafka"
 	"go-kafka-eda-demo/internal/models"
 	"go-kafka-eda-demo/internal/redis"
 	"go-kafka-eda-demo/internal/telemetry"
 	"go-kafka-eda-demo/pkg/config"
 	"go-kafka-eda-demo/pkg/logger"
+
+	"github.com/gorilla/mux"
 )
 
 type ReplayService struct {
@@ -37,21 +37,21 @@ type ReplayRequest struct {
 }
 
 type ReplayResponse struct {
-	Success       bool                   `json:"success"`
-	Message       string                 `json:"message"`
-	Data          interface{}            `json:"data,omitempty"`
-	CorrelationID string                 `json:"correlation_id"`
+	Success       bool        `json:"success"`
+	Message       string      `json:"message"`
+	Data          interface{} `json:"data,omitempty"`
+	CorrelationID string      `json:"correlation_id"`
 }
 
 type ReplayResult struct {
-	TotalMessages     int      `json:"total_messages"`
-	ReplayedMessages  int      `json:"replayed_messages"`
-	FailedMessages    int      `json:"failed_messages"`
-	SkippedMessages   int      `json:"skipped_messages"`
-	ReplayedEventIDs  []string `json:"replayed_event_ids"`
-	FailedEventIDs    []string `json:"failed_event_ids"`
-	SkippedEventIDs   []string `json:"skipped_event_ids"`
-	Duration          string   `json:"duration"`
+	TotalMessages    int      `json:"total_messages"`
+	ReplayedMessages int      `json:"replayed_messages"`
+	FailedMessages   int      `json:"failed_messages"`
+	SkippedMessages  int      `json:"skipped_messages"`
+	ReplayedEventIDs []string `json:"replayed_event_ids"`
+	FailedEventIDs   []string `json:"failed_event_ids"`
+	SkippedEventIDs  []string `json:"skipped_event_ids"`
+	Duration         string   `json:"duration"`
 }
 
 func main() {
@@ -95,8 +95,13 @@ func main() {
 	router := mux.NewRouter()
 	service.setupRoutes(router)
 
+	port, err := strconv.Atoi(cfg.App.HTTPPort)
+	if err != nil {
+		logger.Fatalf(ctx, "Invalid HTTP port: %v", err)
+	}
+
 	server := &http.Server{
-		Addr:         ":" + cfg.App.HTTPPort,
+		Addr:         ":" + strconv.Itoa(port+2),
 		Handler:      router,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
@@ -105,7 +110,7 @@ func main() {
 
 	// Start server in a goroutine
 	go func() {
-		logger.Infof(ctx, "Replay service listening on port %s", cfg.App.HTTPPort)
+		logger.Infof(ctx, "Replay service listening on port %s", strconv.Itoa(port+2))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatalf(ctx, "Failed to start server: %v", err)
 		}
@@ -165,11 +170,11 @@ func (s *ReplayService) correlationIDMiddleware(next http.Handler) http.Handler 
 func (s *ReplayService) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		logger.Infof(r.Context(), "Request started: %s %s", r.Method, r.URL.Path)
-		
+
 		next.ServeHTTP(w, r)
-		
+
 		duration := time.Since(start)
 		logger.Infof(r.Context(), "Request completed: %s %s in %v", r.Method, r.URL.Path, duration)
 	})
@@ -177,7 +182,7 @@ func (s *ReplayService) loggingMiddleware(next http.Handler) http.Handler {
 
 func (s *ReplayService) replayMessages(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	var replayReq ReplayRequest
 	if err := json.NewDecoder(r.Body).Decode(&replayReq); err != nil {
 		s.sendErrorResponse(w, ctx, http.StatusBadRequest, "Invalid request body", err)
@@ -205,7 +210,7 @@ func (s *ReplayService) replayMessages(w http.ResponseWriter, r *http.Request) {
 
 func (s *ReplayService) replayBatch(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	var replayReq ReplayRequest
 	if err := json.NewDecoder(r.Body).Decode(&replayReq); err != nil {
 		s.sendErrorResponse(w, ctx, http.StatusBadRequest, "Invalid request body", err)
@@ -233,7 +238,7 @@ func (s *ReplayService) replayBatch(w http.ResponseWriter, r *http.Request) {
 
 func (s *ReplayService) listDLQMessages(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	// Parse query parameters
 	limitStr := r.URL.Query().Get("limit")
 	limit := 10
@@ -267,7 +272,7 @@ func (s *ReplayService) listDLQMessages(w http.ResponseWriter, r *http.Request) 
 
 func (s *ReplayService) getDLQStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	stats, err := s.calculateDLQStats(ctx)
 	if err != nil {
 		s.sendErrorResponse(w, ctx, http.StatusInternalServerError, "Failed to get DLQ stats", err)
@@ -279,11 +284,11 @@ func (s *ReplayService) getDLQStats(w http.ResponseWriter, r *http.Request) {
 
 func (s *ReplayService) clearDLQ(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	// This is a dangerous operation, so we require confirmation
 	confirm := r.URL.Query().Get("confirm")
 	if confirm != "true" {
-		s.sendErrorResponse(w, ctx, http.StatusBadRequest, "Confirmation required", 
+		s.sendErrorResponse(w, ctx, http.StatusBadRequest, "Confirmation required",
 			fmt.Errorf("add ?confirm=true to confirm DLQ clearing"))
 		return
 	}
@@ -442,7 +447,7 @@ func (s *ReplayService) replayMessage(ctx context.Context, event *models.OrderEv
 		"replay_time": time.Now().UTC().Format(time.RFC3339),
 	}
 
-	err = s.kafkaClient.SendMessageWithHeaders(ctx, s.config.Kafka.TopicOrders, 
+	err = s.kafkaClient.SendMessageWithHeaders(ctx, s.config.Kafka.TopicOrders,
 		[]byte(event.AggregateID), eventBytes, headers)
 	if err != nil {
 		return fmt.Errorf("failed to send message to orders topic: %w", err)
@@ -471,12 +476,12 @@ func (s *ReplayService) calculateDLQStats(ctx context.Context) (map[string]inter
 	// This is a simplified implementation
 	// In a real scenario, you'd calculate actual stats from the DLQ topic
 	return map[string]interface{}{
-		"total_messages":     0,
-		"oldest_message":     nil,
-		"newest_message":     nil,
-		"event_types":        map[string]int{},
-		"error_categories":   map[string]int{},
-		"timestamp":          time.Now().UTC(),
+		"total_messages":   0,
+		"oldest_message":   nil,
+		"newest_message":   nil,
+		"event_types":      map[string]int{},
+		"error_categories": map[string]int{},
+		"timestamp":        time.Now().UTC(),
 	}, nil
 }
 
@@ -498,7 +503,7 @@ func (s *ReplayService) healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (s *ReplayService) readinessCheck(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	// Check Redis connectivity
 	_, err := s.redisClient.Get(ctx, "health_check")
 	if err != nil && err.Error() != "redis: nil" {
@@ -520,7 +525,7 @@ func (s *ReplayService) sendSuccessResponse(w http.ResponseWriter, ctx context.C
 		Data:          data,
 		CorrelationID: logger.GetCorrelationID(ctx),
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -528,15 +533,14 @@ func (s *ReplayService) sendSuccessResponse(w http.ResponseWriter, ctx context.C
 
 func (s *ReplayService) sendErrorResponse(w http.ResponseWriter, ctx context.Context, statusCode int, message string, err error) {
 	logger.Errorf(ctx, "%s: %v", message, err)
-	
+
 	response := ReplayResponse{
 		Success:       false,
 		Message:       message,
 		CorrelationID: logger.GetCorrelationID(ctx),
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(response)
 }
-

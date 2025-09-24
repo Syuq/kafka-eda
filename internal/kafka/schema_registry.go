@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
+	"go-kafka-eda-demo/internal/telemetry"
 	"go-kafka-eda-demo/pkg/config"
 	"go-kafka-eda-demo/pkg/logger"
 )
@@ -55,11 +55,11 @@ func (c *SchemaRegistryClient) RegisterSchema(ctx context.Context, subject, sche
 	defer span.End()
 
 	url := fmt.Sprintf("%s/subjects/%s/versions", c.baseURL, subject)
-	
+
 	payload := map[string]string{
 		"schema": schema,
 	}
-	
+
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal payload: %w", err)
@@ -69,7 +69,7 @@ func (c *SchemaRegistryClient) RegisterSchema(ctx context.Context, subject, sche
 	if err != nil {
 		return 0, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
 
 	resp, err := c.httpClient.Do(req)
@@ -101,7 +101,7 @@ func (c *SchemaRegistryClient) GetSchema(ctx context.Context, id int) (*Schema, 
 	defer span.End()
 
 	url := fmt.Sprintf("%s/schemas/ids/%d", c.baseURL, id)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -136,7 +136,7 @@ func (c *SchemaRegistryClient) GetLatestSchema(ctx context.Context, subject stri
 	defer span.End()
 
 	url := fmt.Sprintf("%s/subjects/%s/versions/latest", c.baseURL, subject)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -175,7 +175,7 @@ func (c *SchemaRegistryClient) GetSchemaByVersion(ctx context.Context, subject s
 	defer span.End()
 
 	url := fmt.Sprintf("%s/subjects/%s/versions/%d", c.baseURL, subject, version)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -214,11 +214,11 @@ func (c *SchemaRegistryClient) CheckCompatibility(ctx context.Context, subject, 
 	defer span.End()
 
 	url := fmt.Sprintf("%s/compatibility/subjects/%s/versions/latest", c.baseURL, subject)
-	
+
 	payload := map[string]string{
 		"schema": schema,
 	}
-	
+
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return false, fmt.Errorf("failed to marshal payload: %w", err)
@@ -228,7 +228,7 @@ func (c *SchemaRegistryClient) CheckCompatibility(ctx context.Context, subject, 
 	if err != nil {
 		return false, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
 
 	resp, err := c.httpClient.Do(req)
@@ -260,7 +260,7 @@ func (c *SchemaRegistryClient) ListSubjects(ctx context.Context) ([]string, erro
 	defer span.End()
 
 	url := fmt.Sprintf("%s/subjects", c.baseURL)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -294,7 +294,7 @@ func (c *SchemaRegistryClient) GetSubjectVersions(ctx context.Context, subject s
 	defer span.End()
 
 	url := fmt.Sprintf("%s/subjects/%s/versions", c.baseURL, subject)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -356,13 +356,13 @@ func (s *AvroSerializer) Serialize(ctx context.Context, subject string, data int
 	// Confluent wire format: magic byte (0) + schema ID (4 bytes) + data
 	result := make([]byte, 5+len(jsonData))
 	result[0] = 0 // Magic byte
-	
+
 	// Schema ID in big-endian format
 	result[1] = byte(schema.ID >> 24)
 	result[2] = byte(schema.ID >> 16)
 	result[3] = byte(schema.ID >> 8)
 	result[4] = byte(schema.ID)
-	
+
 	copy(result[5:], jsonData)
 
 	logger.Debugf(ctx, "Serialized data with schema ID %d for subject %s", schema.ID, subject)
@@ -405,4 +405,3 @@ func (s *AvroSerializer) Deserialize(ctx context.Context, data []byte) (interfac
 	logger.Debugf(ctx, "Deserialized data with schema ID %d", schemaID)
 	return result, nil
 }
-
